@@ -1,11 +1,12 @@
 // Reads text from an uploaded PDF or TXT file that is held in memory (never saved to disk).
 // Uses pdf-parse v2, whose API is a class: new PDFParse({ data }) -> getText() -> destroy().
-import { PDFParse } from 'pdf-parse';
 import { HttpError } from '../utils/errors.js';
 
 const MIN_USEFUL_CHARS = 20;
 
 export async function extractTextFromPdf(buffer) {
+  // Loaded only when a PDF is uploaded, so the server can start even where this library is not supported.
+  const { PDFParse } = await import('pdf-parse');
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
   try {
     const result = await parser.getText();
