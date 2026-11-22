@@ -1,6 +1,6 @@
 // The app shell: sidebar + header + the page for the current mode.
 import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Menu, PanelLeft } from 'lucide-react';
+import { AlertTriangle, Menu, PanelLeft, SquarePen } from 'lucide-react';
 import Sidebar, { NAV } from './components/Sidebar.jsx';
 import SpeedPicker from './components/SpeedPicker.jsx';
 import { useChats } from './context/ChatContext.jsx';
@@ -87,7 +87,7 @@ export default function App() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-2 border-b border-line bg-panel/60 px-3 py-2.5 backdrop-blur">
+        <header className="flex items-center gap-2 bg-surface px-2 pb-1.5 pt-[max(0.5rem,env(safe-area-inset-top))] lg:border-b lg:border-line lg:bg-panel/60 lg:px-3 lg:py-2.5 lg:backdrop-blur">
           <button type="button" onClick={() => setDrawerOpen(true)} aria-label="Open menu" className="rounded-lg p-2 text-mute hover:bg-panel2 hover:text-ink lg:hidden">
             <Menu size={20} />
           </button>
@@ -99,12 +99,16 @@ export default function App() {
           >
             <PanelLeft size={20} />
           </button>
-          <h1 className="text-sm font-semibold">{title}</h1>
+          <h1 className={`text-base font-semibold lg:text-sm ${view === 'chat' || view === 'study' ? 'max-lg:flex-1 max-lg:text-center' : ''}`}>{title}</h1>
           {/* Chat and Study have the picker next to the typing box; other pages keep it here. */}
-          {view !== 'chat' && view !== 'study' && (
+          {view !== 'chat' && view !== 'study' ? (
             <div className="ms-auto">
               <SpeedPicker />
             </div>
+          ) : (
+            <button type="button" onClick={newChat} aria-label="New chat" className="rounded-lg p-2 text-mute hover:bg-panel2 hover:text-ink lg:hidden">
+              <SquarePen size={20} />
+            </button>
           )}
         </header>
 

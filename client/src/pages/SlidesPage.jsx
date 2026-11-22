@@ -2,7 +2,7 @@
 // The student edits everything, chooses a design, colours and fonts, and downloads a real .pptx file.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowDown, ArrowUp, Copy, Download, Lightbulb, Plus, Presentation, RefreshCw, RotateCcw, Shuffle, Sparkles, Trash2, Wand2,
+  ArrowDown, ArrowUp, Copy, Download, Image as ImageIcon, Lightbulb, Plus, Presentation, RefreshCw, RotateCcw, Shuffle, Sparkles, Trash2, Wand2,
 } from 'lucide-react';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 import Segmented from '../components/Segmented.jsx';
@@ -41,6 +41,7 @@ const DESIGN_TABS = [
 const uid = () => Math.random().toString(36).slice(2, 9);
 const inputCls = 'w-full rounded-lg border border-line bg-panel2 px-3 py-2 text-sm outline-none transition placeholder:text-mute focus:border-brand';
 const labelCls = 'mb-1 block text-xs font-medium text-mute';
+const nextSeed = (n) => ((Number(n) || 0) + 1 + Math.floor(Math.random() * 50)) % 100000;
 const stripIds = (deck) => ({ ...deck, slides: deck.slides.map(({ id, ...rest }) => rest) });
 
 function Switch({ checked, onChange, label }) {
@@ -128,7 +129,7 @@ export default function SlidesPage() {
     setSel(copy.id);
   };
   const addSlide = () => {
-    const slide = { id: uid(), title: 'New slide', layout: 'bullets', bullets: ['First point'], speakerNotes: '', visualIdea: '' };
+    const slide = { id: uid(), title: 'New slide', layout: 'bullets', bullets: ['First point'], speakerNotes: '', visualIdea: '', imagePrompt: '', imageSeed: 0, noImage: false };
     patchDeck({ slides: [...deck.slides, slide] });
     setSel(slide.id);
     setTab('edit');
@@ -250,7 +251,7 @@ export default function SlidesPage() {
   const customColours = Boolean(opts.primary || opts.accent);
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 pb-12 pt-6">
+    <div className="mx-auto w-full max-w-6xl px-3 pb-12 pt-4 sm:px-4 sm:pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-xl font-bold tracking-tight">Your presentation</h1>
@@ -270,15 +271,15 @@ export default function SlidesPage() {
       <div className="mt-5 grid gap-5 lg:grid-cols-[14.5rem_1fr]">
         {/* outline with live thumbnails */}
         <aside className="rounded-2xl border border-line bg-panel p-3 lg:max-h-[calc(100dvh-9rem)] lg:overflow-y-auto">
-          <ol className="space-y-2.5">
+          <ol className="flex gap-2.5 overflow-x-auto pb-1 lg:block lg:space-y-2.5 lg:overflow-visible lg:pb-0">
             {specs.map((spec, k) => {
               const id = k === 0 ? 'title' : deck.slides[k - 1].id;
               const active = sel === id;
               return (
-                <li key={id}>
+                <li key={id} className="w-40 shrink-0 lg:w-auto">
                   <button type="button" onClick={() => setSel(id)} aria-current={active ? 'true' : undefined} className="flex w-full items-start gap-2 text-left">
                     <span className={`mt-1 w-4 shrink-0 text-center text-xs ${active ? 'font-bold text-brand' : 'text-mute'}`}>{k + 1}</span>
-                    <SlideView spec={spec} className={`min-w-0 flex-1 rounded-md ring-2 transition ${active ? 'ring-brand' : 'ring-line hover:ring-brand/50'}`} />
+                    <SlideView spec={spec} pictures={false} className={`min-w-0 flex-1 rounded-md ring-2 transition ${active ? 'ring-brand' : 'ring-line hover:ring-brand/50'}`} />
                   </button>
                 </li>
               );
@@ -303,6 +304,14 @@ export default function SlidesPage() {
                 <label className="block"><span className={labelCls}>Your name and course (shown on the title slide and in the footer)</span>
                   <input dir="auto" value={deck.presenter} maxLength={100} onChange={(e) => { patchDeck({ presenter: e.target.value }); saveString('presenter', e.target.value); }} placeholder="e.g. Ali Khan · Generative AI" className={inputCls} />
                 </label>
+                <div>
+                  <span className={labelCls}>Cover picture (describe it in English)</span>
+                  <div className="flex gap-2">
+                    <input value={deck.coverPrompt || ''} maxLength={200} onChange={(e) => patchDeck({ coverPrompt: e.target.value })} placeholder="e.g. glowing neural network in deep blue light" className={inputCls} />
+                    <button type="button" onClick={() => patchDeck({ coverSeed: nextSeed(deck.coverSeed) })} disabled={!deck.coverPrompt} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 text-sm text-mute enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40"><Shuffle size={14} /> New</button>
+                  </div>
+                  <p className="mt-1 text-xs text-mute">Leave it empty for a plain title slide.</p>
+                </div>
               </div>
             )}
             {tab === 'edit' && current && (
@@ -337,6 +346,15 @@ export default function SlidesPage() {
                 <label className="block"><span className={labelCls}>Speaker notes (what you say; saved in the PowerPoint notes)</span>
                   <textarea dir="auto" rows={3} value={current.speakerNotes} onChange={(e) => patchSlide(current.id, { speakerNotes: e.target.value })} className={`${inputCls} resize-y`} />
                 </label>
+                <div>
+                  <span className={`${labelCls} flex items-center gap-1.5`}><ImageIcon size={13} className="text-brand" /> Picture on this slide (describe it in English)</span>
+                  <div className="flex gap-2">
+                    <input value={current.imagePrompt || ''} maxLength={200} disabled={current.noImage} onChange={(e) => patchSlide(current.id, { imagePrompt: e.target.value })} placeholder="e.g. students working on laptops in a bright classroom" className={`${inputCls} disabled:opacity-50`} />
+                    <button type="button" onClick={() => patchSlide(current.id, { imageSeed: nextSeed(current.imageSeed) })} disabled={!current.imagePrompt || current.noImage} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 text-sm text-mute enabled:hover:border-brand enabled:hover:text-brand disabled:opacity-40"><Shuffle size={14} /> New</button>
+                  </div>
+                  <label className="mt-2 flex items-center gap-2 text-sm text-mute"><input type="checkbox" checked={Boolean(current.noImage)} onChange={(e) => patchSlide(current.id, { noImage: e.target.checked })} /> No picture on this slide</label>
+                  <p className="mt-1 text-xs text-mute">Pictures are made by a free AI image service and can take a few seconds. Bullet slides show the picture beside the text.</p>
+                </div>
                 <label className="block"><span className={labelCls}>Visual idea (picture, chart or diagram to add yourself)</span>
                   <input dir="auto" value={current.visualIdea} maxLength={300} onChange={(e) => patchSlide(current.id, { visualIdea: e.target.value })} className={inputCls} />
                 </label>
@@ -354,7 +372,7 @@ export default function SlidesPage() {
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                     {templateThumbs.map(([id, spec]) => (
                       <button key={id} type="button" onClick={() => setOpt({ template: id })} aria-pressed={opts.template === id} className="text-left">
-                        <SlideView spec={spec} className={`rounded-lg ring-2 transition ${opts.template === id ? 'ring-brand' : 'ring-line hover:ring-brand/50'}`} />
+                        <SlideView spec={spec} pictures={false} className={`rounded-lg ring-2 transition ${opts.template === id ? 'ring-brand' : 'ring-line hover:ring-brand/50'}`} />
                         <span className={`mt-1.5 block text-sm font-medium ${opts.template === id ? 'text-brand' : ''}`}>{TEMPLATES[id].name}</span>
                         <span className="block text-xs text-mute">{TEMPLATES[id].text}</span>
                       </button>
@@ -397,6 +415,7 @@ export default function SlidesPage() {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
+                  <Switch checked={opts.images} onChange={(v) => setOpt({ images: v })} label="Pictures and photo backgrounds" />
                   <Switch checked={opts.showNumbers} onChange={(v) => setOpt({ showNumbers: v })} label="Slide numbers" />
                   <Switch checked={opts.showFooter} onChange={(v) => setOpt({ showFooter: v })} label="Footer (your name and title)" />
                 </div>

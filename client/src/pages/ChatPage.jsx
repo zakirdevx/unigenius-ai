@@ -73,7 +73,7 @@ export default function ChatPage({ mode, onFeature }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       {(isStudy || !isEmpty) && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2 sm:gap-3 sm:px-4 sm:py-2.5">
           {isStudy ? (
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-mute">Level</span>
@@ -101,7 +101,7 @@ export default function ChatPage({ mode, onFeature }) {
         {isEmpty ? (
           <Welcome mode={mode} onFeature={handleFeature} onPrompt={handleSend} />
         ) : (
-          <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6" aria-live="polite">
+          <div className="mx-auto w-full max-w-3xl space-y-5 px-3 py-4 sm:space-y-6 sm:px-4 sm:py-6" aria-live="polite">
             {messages.map((message, index) => (
               <MessageBubble
                 key={message.id}

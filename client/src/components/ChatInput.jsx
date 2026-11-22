@@ -79,8 +79,8 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, pref
   const nearLimit = value.length > MAX_CHARS * 0.9;
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-3 pb-4 sm:px-4">
-      <div className="flex items-end gap-2 rounded-2xl border border-line bg-panel p-2 shadow-lg transition focus-within:border-brand">
+    <div className="mx-auto w-full max-w-3xl px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 sm:px-4 sm:pb-4">
+      <div className="flex items-end gap-1.5 rounded-[1.6rem] border border-line bg-panel p-1.5 shadow-lg transition focus-within:border-brand sm:gap-2 sm:rounded-2xl sm:p-2">
         <textarea
           ref={ref}
           value={value}
@@ -91,7 +91,7 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, pref
           dir="auto"
           placeholder={placeholder}
           aria-label="Message"
-          className="max-h-[200px] flex-1 resize-none bg-transparent px-2 py-2 text-[0.95rem] text-ink outline-none placeholder:text-mute"
+          className="max-h-[200px] min-w-0 flex-1 resize-none bg-transparent px-3 py-2.5 text-base text-ink outline-none placeholder:text-mute sm:px-2 sm:py-2 sm:text-[0.95rem]"
         />
         {hasRecognition() && (
           <button
@@ -100,7 +100,7 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, pref
             aria-label={listening ? 'Stop voice typing' : 'Type with your voice'}
             title={listening ? 'Stop voice typing' : 'Type with your voice'}
             aria-pressed={listening}
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition sm:rounded-xl ${
               listening ? 'animate-pulse border-bad bg-bad/10 text-bad' : 'border-line bg-panel2 text-mute hover:text-ink'
             }`}
           >
@@ -116,7 +116,7 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, pref
             onClick={onStop}
             aria-label="Stop generating"
             title="Stop generating"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-panel2 text-ink transition hover:bg-line"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line bg-panel2 text-ink transition hover:bg-line sm:rounded-xl"
           >
             <Square size={16} fill="currentColor" />
           </button>
@@ -127,16 +127,21 @@ export default function ChatInput({ onSend, onStop, streaming, placeholder, pref
             disabled={!value.trim()}
             aria-label="Send message"
             title="Send (Enter)"
-            className="gradient-brand flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white transition enabled:hover:brightness-110 disabled:opacity-40"
+            className="gradient-brand flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition enabled:hover:brightness-110 disabled:opacity-40 sm:rounded-xl"
           >
             <ArrowUp size={18} />
           </button>
         )}
       </div>
-      <p className={`mt-2 text-center text-xs ${nearLimit || micError ? 'text-bad' : 'text-mute'}`}>
+      <p className={`mt-1.5 text-center text-[0.7rem] sm:mt-2 sm:text-xs ${nearLimit || micError ? 'text-bad' : 'text-mute'}`}>
         {micError ? micError : nearLimit
           ? `${value.length} / ${MAX_CHARS} characters`
-          : 'Enter to send · Shift+Enter for a new line · AI can make mistakes, so double-check important facts.'}
+          : (
+            <>
+              <span className="sm:hidden">AI can make mistakes. Check important facts.</span>
+              <span className="hidden sm:inline">Enter to send · Shift+Enter for a new line · AI can make mistakes, so double-check important facts.</span>
+            </>
+          )}
       </p>
     </div>
   );

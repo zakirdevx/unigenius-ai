@@ -27,6 +27,7 @@ export function createApp() {
           'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
           'frame-ancestors': ["'self'", 'https://huggingface.co', 'https://*.huggingface.co', 'https://*.hf.space'],
           'media-src': ["'self'", 'blob:', 'data:'], // natural voice audio
+          'img-src': ["'self'", 'data:', 'blob:', 'https://image.pollinations.ai'], // slide pictures
           'font-src': ["'self'", 'https://fonts.gstatic.com', 'data:'],
         },
       },

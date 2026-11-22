@@ -30,12 +30,12 @@ export default function Welcome({ mode, onFeature, onPrompt }) {
   const prompts = isStudy ? STUDY_PROMPTS : CHAT_PROMPTS;
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 pb-6 pt-8 text-center sm:pt-14">
-      <div className="gradient-brand glow fade-up mb-5 flex h-16 w-16 items-center justify-center rounded-2xl text-white">
-        <Sparkles size={30} />
+    <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 pb-4 pt-6 text-center sm:pb-6 sm:pt-14">
+      <div className="gradient-brand glow fade-up mb-4 flex h-14 w-14 items-center justify-center rounded-2xl text-white sm:mb-5 sm:h-16 sm:w-16">
+        <Sparkles size={28} />
       </div>
 
-      <h1 className="fade-up text-3xl font-bold tracking-tight sm:text-4xl">
+      <h1 className="fade-up text-2xl font-bold tracking-tight sm:text-4xl">
         {isStudy ? (
           <>
             Study Mode: <span className="gradient-text">learn step by step</span>
@@ -46,44 +46,44 @@ export default function Welcome({ mode, onFeature, onPrompt }) {
           </>
         )}
       </h1>
-      <p className="fade-up mt-3 max-w-xl text-base text-mute sm:text-lg">
+      <p className="fade-up mt-2 max-w-xl text-sm text-mute sm:mt-3 sm:text-lg">
         {isStudy
           ? 'Type any topic. Pick your level above and get a simple explanation, steps, an example and a summary.'
           : 'Learn smarter, understand faster, and achieve more with AI.'}
       </p>
 
       {!isStudy && (
-        <div className="mt-8 grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="mt-6 grid w-full grid-cols-2 gap-2.5 sm:mt-8 sm:gap-3">
           {FEATURES.map(({ id, title, text, icon: Icon, color }) => (
             <button
               key={id}
               type="button"
               onClick={() => onFeature(id)}
-              className="fade-up group flex items-center gap-4 sm:last:col-span-2 rounded-2xl border border-line bg-panel p-4 text-left transition hover:-translate-y-0.5 hover:border-brand hover:shadow-lg"
+              className="fade-up group flex flex-col items-start gap-2.5 rounded-2xl border border-line bg-panel p-3.5 text-left transition last:col-span-2 hover:-translate-y-0.5 hover:border-brand hover:shadow-lg sm:flex-row sm:items-center sm:gap-4 sm:p-4"
             >
-              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${color} text-white`}>
-                <Icon size={20} />
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br sm:h-11 sm:w-11 ${color} text-white`}>
+                <Icon size={19} />
               </span>
               <span>
-                <span className="block font-semibold">{title}</span>
-                <span className="block text-sm text-mute">{text}</span>
+                <span className="block text-sm font-semibold sm:text-base">{title}</span>
+                <span className="block text-xs text-mute sm:text-sm">{text}</span>
               </span>
             </button>
           ))}
         </div>
       )}
 
-      <p className="mb-3 mt-8 text-xs font-semibold uppercase tracking-wider text-mute">
+      <p className="mb-3 mt-6 text-xs font-semibold uppercase tracking-wider text-mute sm:mt-8">
         {isStudy ? 'Try a topic' : 'Try asking'}
       </p>
-      <div className="flex flex-wrap justify-center gap-2">
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center">
         {prompts.map((prompt) => (
           <button
             key={prompt}
             type="button"
             onClick={() => onPrompt(prompt)}
             dir="auto"
-            className="rounded-full border border-line bg-panel px-4 py-2 text-sm transition hover:border-brand hover:bg-panel2"
+            className="rounded-2xl border border-line bg-panel px-4 py-2.5 text-start text-sm transition hover:border-brand hover:bg-panel2 sm:rounded-full sm:text-center"
           >
             {prompt}
           </button>

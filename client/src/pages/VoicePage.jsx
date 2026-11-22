@@ -2,13 +2,14 @@
 // then talks with the AI. The AI speaks first, listens to the answer, replies aloud, and so on.
 // Speech uses the browser's own features (see utils/speech.js), so nothing extra is installed.
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, ArrowUp, RefreshCw, Mic, PhoneOff, RotateCcw, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowUp, Keyboard, MessageSquare, Mic, MicOff, PhoneOff, RotateCcw, Sparkles, X } from 'lucide-react';
 import Segmented from '../components/Segmented.jsx';
 import { useSpeed } from '../context/SpeedContext.jsx';
 import { errorMessage, streamPost } from '../services/api.js';
 import { loadString, saveString } from '../utils/storage.js';
 import {
-  cleanForSpeech, createCloudSpeaker, createRecognizer, createSpeaker, createVoiceMonitor, getVoiceLang, hasRecognition, hasSynthesis, setVoiceLang, takeSentences,
+  askMicPermission, cleanForSpeech, createCloudSpeaker, createRecognizer, createSpeaker, createVoiceMonitor, getVoiceLang, hasRecognition, hasSynthesis,
+  isMobileDevice, setVoiceLang, takeSentences, unlockAudio,
 } from '../utils/speech.js';
 
 const PRESETS = [
@@ -44,10 +45,10 @@ const startPrompt = (lang) =>
   (lang === 'ur-PK' ? ' Speak in Urdu (Urdu script).' : '');
 
 const STATUS = {
-  idle: 'Tap the microphone to talk',
-  listening: 'Listening… speak now (tap to send)',
+  idle: 'Tap the mic to talk',
+  listening: 'Listening…',
   thinking: 'Thinking…',
-  speaking: 'Speaking… (tap to interrupt)',
+  speaking: 'Speaking',
 };
 
 function Toggle({ checked, onChange, title, hint }) {
@@ -72,25 +73,11 @@ function Toggle({ checked, onChange, title, hint }) {
 
 function Orb({ phase, onClick }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={STATUS[phase]}
-      className="gradient-brand glow relative flex h-24 w-24 items-center justify-center rounded-full text-white transition hover:brightness-110 active:scale-95"
-    >
-      {phase === 'listening' && (
-        <>
-          <span className="orb-ring absolute inset-0 rounded-full bg-brand/40" />
-          <span className="orb-ring orb-ring-2 absolute inset-0 rounded-full bg-brand/40" />
-        </>
-      )}
-      {phase === 'thinking' && <RefreshCw size={34} className="animate-spin" />}
-      {phase === 'speaking' && (
-        <span className="flex h-9 items-center gap-1" aria-hidden="true">
-          {[0, 1, 2, 3, 4].map((i) => <span key={i} className="bar block h-full w-1.5 rounded-full bg-white" />)}
-        </span>
-      )}
-      {(phase === 'idle' || phase === 'listening') && <Mic size={34} className="relative" />}
+    <button type="button" onClick={onClick} aria-label={STATUS[phase] || 'Voice'} data-phase={phase} className="vorb block outline-none">
+      <span className="vorb-glow" />
+      <span className="vorb-ring" />
+      <span className="vorb-ring vorb-ring-2" />
+      <span className="vorb-core" />
     </button>
   );
 }
@@ -107,14 +94,18 @@ export default function VoicePage() {
   const [canRetry, setCanRetry] = useState(false);
   const [typed, setTyped] = useState('');
   const [natural, setNatural] = useState(() => loadString('voiceNatural', '1') === '1'); // server voice
-  const [barge, setBarge] = useState(() => loadString('voiceBarge', '1') === '1'); // interrupt by speaking
+  const mobile = isMobileDevice(); // phones share one microphone, so speaking-to-interrupt is only for computers
+  const [barge, setBarge] = useState(() => !mobile && loadString('voiceBarge2', '1') === '1'); // interrupt by speaking
+  const [muted, setMuted] = useState(false);
+  const [showText, setShowText] = useState(false);
+  const [showType, setShowType] = useState(false);
   const [notice, setNotice] = useState('');
   const endRef = useRef(null);
 
   // All "live" values sit in one ref so timers and speech callbacks never see stale state.
   const s = useRef({
     active: false, mode: 'idle', rec: null, speaker: null, abort: null, history: [],
-    turn: 0, empty: 0, heard: false, full: '', buffer: '', streamDone: false, committed: true,
+    turn: 0, empty: 0, paused: false, heard: false, full: '', buffer: '', streamDone: false, committed: true,
     role: '', lang: 'en-US', speed: 'fast', natural: true, monitor: null,
   });
   useEffect(() => { s.current.speed = speed; }, [speed]);
@@ -161,7 +152,7 @@ export default function VoicePage() {
 
   function listen() {
     const st = s.current;
-    if (!st.active) return;
+    if (!st.active || st.paused) return;
     if (!hasRecognition()) { setMode('idle'); return; }
     killRecognizer();
     st.heard = false;
@@ -187,9 +178,9 @@ export default function VoicePage() {
         if (failure === 'audio-capture') { fail('No microphone was found. Plug one in, or type your answer below.'); return; }
         if (failure === 'network') { fail('Speech recognition needs internet (Chrome sends your voice to Google). Check your connection, or type your answer below.'); return; }
         st.empty += 1;
-        if (st.empty >= 3) { st.empty = 0; setMode('idle'); return; } // nobody is talking: pause
+        if (st.empty >= 6) { st.empty = 0; st.paused = true; setMuted(true); setMode('idle'); return; } // nobody is talking: pause
         const turn = st.turn;
-        setTimeout(() => { if (st.active && st.turn === turn && st.mode === 'listening' && !st.rec) listen(); }, 250);
+        setTimeout(() => { if (st.active && st.turn === turn && st.mode === 'listening' && !st.rec) listen(); }, 150);
       },
     });
     st.rec = rec;
@@ -291,8 +282,22 @@ export default function VoicePage() {
   }
 
   // ---- user actions ----
+  const toggleMute = () => {
+    const st = s.current;
+    if (st.paused) {
+      st.paused = false;
+      setMuted(false);
+      if (st.mode === 'idle') listen();
+      return;
+    }
+    st.paused = true;
+    setMuted(true);
+    if (st.mode === 'listening') { killRecognizer(); setInterim(''); setMode('idle'); }
+  };
+
   const onOrb = () => {
     const st = s.current;
+    if (st.paused) { st.paused = false; setMuted(false); }
     if (st.mode === 'listening') {
       if (st.heard && st.rec) st.rec.stop(); // send what was said now
       else { killRecognizer(); setInterim(''); setMode('idle'); } // pause listening
@@ -317,17 +322,31 @@ export default function VoicePage() {
     handleUser(text);
   };
 
-  const start = () => {
+  const start = async () => {
     const st = s.current;
     if (!role.trim()) return;
+    unlockAudio(); // must happen inside the tap, before any waiting, or phones block the AI's voice
+    const useBarge = barge && !mobile;
     setVoiceLang(lang);
     saveString('voiceNatural', natural ? '1' : '0');
-    saveString('voiceBarge', barge ? '1' : '0');
+    saveString('voiceBarge2', barge ? '1' : '0');
     setNotice('');
+    setMuted(false);
+    setShowText(false);
+    setShowType(false);
+    setLines([]);
+    setError('');
     Object.assign(st, {
-      active: true, role: role.trim(), lang, natural, history: [{ role: 'user', content: startPrompt(lang) }], empty: 0,
+      active: true, paused: false, role: role.trim(), lang, natural, history: [{ role: 'user', content: startPrompt(lang) }], empty: 0,
     });
-    if (barge) {
+    setStage('live');
+    if (hasRecognition() && !(await askMicPermission())) {
+      setError('The microphone is blocked. Tap the lock icon in the address bar, allow the microphone, then tap the mic button. You can type your answers meanwhile.');
+      st.paused = true;
+      setMuted(true);
+    }
+    if (!st.active) return;
+    if (useBarge) {
       // Speak-to-interrupt: while the AI talks, real speech from you stops it and starts listening.
       createVoiceMonitor({
         shouldListen: () => st.active && st.mode === 'speaking',
@@ -336,14 +355,12 @@ export default function VoicePage() {
         .then((m) => { if (st.active) st.monitor = m; else m.stop(); })
         .catch(() => setNotice('Speak-to-interrupt needs microphone permission. You can still tap the circle to interrupt.'));
     }
-    setLines([]);
-    setError('');
-    setStage('live');
     ask(); // the AI speaks first
   };
 
   const end = () => {
     s.current.active = false;
+    s.current.paused = false;
     stopEverything();
     stopMonitor();
     setMode('idle');
@@ -425,12 +442,18 @@ export default function VoicePage() {
             title="Natural male teacher voice"
             hint="Clear, slow and easy to understand. Much better Urdu. Falls back to the browser voice if unavailable."
           />
-          <Toggle
-            checked={barge}
-            onChange={setBarge}
-            title="Interrupt by speaking"
-            hint="Just start talking while the AI speaks, like a real conversation. Headphones work best."
-          />
+          {mobile ? (
+            <p className="rounded-xl border border-line bg-panel px-4 py-3 text-xs text-mute">
+              On a phone, tap the glowing circle to interrupt the AI. (Phones can only use the microphone for one thing at a time.)
+            </p>
+          ) : (
+            <Toggle
+              checked={barge}
+              onChange={setBarge}
+              title="Interrupt by speaking"
+              hint="Just start talking while the AI speaks, like a real conversation. Headphones work best."
+            />
+          )}
         </div>
 
         <button
@@ -448,86 +471,95 @@ export default function VoicePage() {
     );
   }
 
-  // ---------------- live conversation ----------------
+  // ---------------- live conversation (full screen, like a call) ----------------
+  const lastAi = [...lines].reverse().find((l) => l.role === 'assistant')?.content || '';
+  const shownPhase = muted && phase === 'idle' ? 'muted' : phase;
+  const label = muted && phase === 'idle' ? 'Mic is off. Tap the mic to talk' : phase === 'speaking' && barge && !mobile ? 'Speaking… just talk to interrupt' : phase === 'speaking' && mobile ? 'Speaking… tap the circle to interrupt' : STATUS[phase];
+  const caption = phase === 'listening' ? interim : lastAi.length > 260 ? `…${lastAi.slice(-260)}` : lastAi;
+
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-3 sm:px-4">
-      <div className="flex items-center justify-between gap-3 py-3">
-        <p dir="auto" className="min-w-0 truncate text-sm text-mute" title={role}>
-          <span className="font-semibold text-ink">Role: </span>{role}
-        </p>
-        <button
-          type="button"
-          onClick={end}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm text-bad transition hover:bg-bad/10"
-        >
-          <PhoneOff size={15} /> End
+    <div className="vscreen fixed inset-0 z-[60] flex flex-col text-white" role="dialog" aria-label="Voice conversation">
+      <div className="flex items-center justify-between gap-3 px-4 pb-2 pt-4">
+        <p dir="auto" className="min-w-0 truncate text-sm text-white/60" title={role}>{role}</p>
+        <button type="button" onClick={() => setShowText((v) => !v)} aria-pressed={showText} className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs text-white/80 hover:bg-white/20">
+          <MessageSquare size={14} /> {showText ? 'Hide text' : 'Show text'}
         </button>
       </div>
 
-      <div className="flex-1 space-y-4 pb-4" aria-live="polite">
-        {lines.map((m) =>
-          m.role === 'user' ? (
-            <div key={m.id} className="fade-up flex justify-end">
-              <div dir="auto" className="gradient-brand max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md px-4 py-2.5 text-[0.95rem] text-white shadow-md">
-                {m.content}
-              </div>
-            </div>
-          ) : (
-            <div key={m.id} className="fade-up flex gap-3">
-              <div className="gradient-brand mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white">
-                <Sparkles size={16} />
-              </div>
-              <p dir="auto" className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[0.95rem] leading-relaxed">
-                {m.content || <span className="text-mute">…</span>}
-              </p>
-            </div>
-          ),
-        )}
-        <div ref={endRef} />
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
+        <Orb phase={shownPhase} onClick={onOrb} />
+        <p className="text-base font-medium text-white/90" aria-live="polite">{label}</p>
+        <p dir="auto" className={`line-clamp-4 min-h-[4.5rem] max-w-xl text-lg leading-relaxed ${phase === 'listening' ? 'text-white' : 'text-white/55'}`}>{caption}</p>
       </div>
 
-      <div className="sticky bottom-0 border-t border-line bg-surface/95 pb-4 pt-3 backdrop-blur">
-        {notice && !error && <p className="mb-3 text-center text-xs text-mute">{notice}</p>}
+      <div className="px-4 pb-6">
+        {notice && !error && <p className="mb-3 text-center text-xs text-white/60">{notice}</p>}
         {error && (
-          <div role="alert" className="mb-3 flex items-start gap-2 rounded-xl border border-bad/30 bg-bad/10 px-3 py-2 text-sm">
-            <AlertTriangle size={16} className="mt-0.5 shrink-0 text-bad" />
+          <div role="alert" className="mx-auto mb-4 flex max-w-lg items-start gap-2 rounded-xl border border-red-400/30 bg-red-500/15 px-3 py-2 text-left text-sm">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0 text-red-300" />
             <span className="flex-1">{error}</span>
             {canRetry && (
-              <button type="button" onClick={retry} className="inline-flex items-center gap-1 text-brand hover:underline">
+              <button type="button" onClick={retry} className="inline-flex items-center gap-1 text-violet-200 hover:underline">
                 <RotateCcw size={14} /> Retry
               </button>
             )}
           </div>
         )}
 
-        <div className="flex flex-col items-center gap-2">
-          <p dir="auto" className="min-h-6 max-w-full truncate px-2 text-center text-sm text-ink/80">{interim}</p>
-          <Orb phase={phase} onClick={onOrb} />
-          <p className="text-sm text-mute">
-            {phase === 'speaking' && barge ? 'Speaking… just talk to interrupt' : STATUS[phase]}
-          </p>
-        </div>
+        {showType && (
+          <form onSubmit={sendTyped} className="mx-auto mb-4 flex max-w-lg items-center gap-2 rounded-full bg-white/10 p-1.5 pl-4">
+            <input
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              dir="auto"
+              maxLength={2000}
+              autoFocus
+              placeholder="Type instead of talking…"
+              aria-label="Type your answer"
+              className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/40"
+            />
+            <button type="submit" disabled={!typed.trim()} aria-label="Send typed answer" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#0b0a1f] disabled:opacity-40">
+              <ArrowUp size={16} />
+            </button>
+          </form>
+        )}
 
-        <form onSubmit={sendTyped} className="mx-auto mt-3 flex max-w-xl items-center gap-2 rounded-2xl border border-line bg-panel p-1.5 focus-within:border-brand">
-          <input
-            value={typed}
-            onChange={(e) => setTyped(e.target.value)}
-            dir="auto"
-            maxLength={2000}
-            placeholder="Or type your answer here…"
-            aria-label="Type your answer"
-            className="min-w-0 flex-1 bg-transparent px-3 py-1.5 text-sm outline-none placeholder:text-mute"
-          />
-          <button
-            type="submit"
-            disabled={!typed.trim()}
-            aria-label="Send typed answer"
-            className="gradient-brand flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white transition enabled:hover:brightness-110 disabled:opacity-40"
-          >
-            <ArrowUp size={16} />
+        <div className="flex items-center justify-center gap-5">
+          <button type="button" onClick={toggleMute} data-on={!muted} aria-label={muted ? 'Turn microphone on' : 'Turn microphone off'} className="vbtn">
+            {muted ? <MicOff size={22} /> : <Mic size={22} />}
           </button>
-        </form>
+          <button type="button" onClick={() => setShowType((v) => !v)} data-on={showType} aria-label="Type instead" className="vbtn">
+            <Keyboard size={22} />
+          </button>
+          <button type="button" onClick={end} aria-label="End conversation" className="flex h-14 w-14 items-center justify-center rounded-full bg-red-500 text-white transition hover:bg-red-400 active:scale-95">
+            <PhoneOff size={22} />
+          </button>
+        </div>
       </div>
+
+      {showText && (
+        <div className="absolute inset-x-0 bottom-0 top-14 z-10 flex flex-col rounded-t-3xl bg-[#0d0c26]/97 backdrop-blur">
+          <div className="flex items-center justify-between px-5 py-3">
+            <p className="text-sm font-semibold">Conversation</p>
+            <button type="button" onClick={() => setShowText(false)} aria-label="Close" className="rounded-full bg-white/10 p-1.5 hover:bg-white/20"><X size={16} /></button>
+          </div>
+          <div className="flex-1 space-y-4 overflow-y-auto px-5 pb-8" aria-live="polite">
+            {lines.map((m) =>
+              m.role === 'user' ? (
+                <div key={m.id} className="flex justify-end">
+                  <div dir="auto" className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-violet-600 px-4 py-2.5 text-[0.95rem]">{m.content}</div>
+                </div>
+              ) : (
+                <div key={m.id} className="flex gap-3">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-500"><Sparkles size={16} /></div>
+                  <p dir="auto" className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[0.95rem] leading-relaxed text-white/90">{m.content || '…'}</p>
+                </div>
+              ),
+            )}
+            <div ref={endRef} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

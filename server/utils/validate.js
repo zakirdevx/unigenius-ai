@@ -178,6 +178,9 @@ export function cleanSlide(s) {
     bullets: (Array.isArray(s?.bullets) ? s.bullets : []).map((x) => str(x, 240)).filter(Boolean).slice(0, 8),
     speakerNotes: asString(s?.speakerNotes).trim().slice(0, 1500),
     visualIdea: str(s?.visualIdea, 300),
+    imagePrompt: str(s?.imagePrompt, 200),
+    imageSeed: Number.isInteger(s?.imageSeed) ? Math.abs(s.imageSeed) % 100000 : 0,
+    noImage: s?.noImage === true,
   };
 }
 
@@ -199,6 +202,8 @@ export function cleanDeck(data, { maxSlides = 25, requireSlides = true } = {}) {
     themeSuggestion: THEME_IDS.includes(data?.themeSuggestion) ? data.themeSuggestion : 'ocean',
     designSuggestion: TEMPLATE_IDS.includes(data?.designSuggestion) ? data.designSuggestion : '',
     designTips: list(data?.designTips, 300, 8),
+    coverPrompt: str(data?.coverPrompt, 200),
+    coverSeed: Number.isInteger(data?.coverSeed) ? Math.abs(data.coverSeed) % 100000 : 0,
     slides,
   };
 }

@@ -2,7 +2,7 @@
 //  - the app files (scripts, styles, icons) are cached after the first visit
 //  - pages are always fetched fresh when online, so updates appear right away
 //  - /api requests (chat, voice, slides) are NEVER cached
-const CACHE = 'unigenius-v9';
+const CACHE = 'unigenius-v10';
 const SHELL = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/favicon.svg'];
 
 self.addEventListener('install', (event) => {

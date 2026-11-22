@@ -39,6 +39,10 @@ export async function createSlides(req, res, next) {
       '- Each normal slide has 3 to 5 short bullets (max about 15 words each). No long paragraphs on slides.\n' +
       '- "speakerNotes": 2 to 4 sentences the presenter can say for that slide.\n' +
       '- "visualIdea": one concrete suggestion for a picture, chart or diagram for that slide.\n' +
+      '- "imagePrompt": a short ENGLISH description (8 to 18 words) of ONE beautiful photo or illustration that fits the slide, for an AI image generator. ' +
+      'Describe a concrete scene or object (for example "close-up of glowing fibre optic cables in a dark data centre"). ' +
+      'No text, no letters, no logos, no charts, no real named people. For "quote" slides use an empty string.\n' +
+      '- "coverPrompt": the same kind of description for the title slide background photo, wide and atmospheric.\n' +
       `- "themeSuggestion": exactly one of ${THEME_IDS.join(', ')}, the colour that fits the topic best.\n` +
       `- "designSuggestion": exactly one of ${TEMPLATE_IDS.join(', ')}, the design that fits the topic and the ${style.toLowerCase()} style best.\n` +
       '- "designTips": 4 to 6 practical design tips for this specific presentation (colours, fonts, images, layout, delivery).\n' +

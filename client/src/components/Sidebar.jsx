@@ -111,11 +111,11 @@ export default function Sidebar({
 
       <aside
         aria-label="Sidebar"
-        className={`fixed inset-y-0 left-0 z-40 flex w-72 shrink-0 transform flex-col border-r border-line bg-panel transition-transform duration-200 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-[84vw] max-w-xs shrink-0 transform lg:w-72 flex-col border-r border-line bg-panel transition-transform duration-200 lg:static lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         } ${collapsed ? 'lg:hidden' : ''}`}
       >
-        <div className="flex items-center justify-between px-4 pb-3 pt-4">
+        <div className="flex items-center justify-between px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))]">
           <div className="flex items-center gap-2.5">
             <span className="gradient-brand flex h-9 w-9 items-center justify-center rounded-xl text-white">
               <Sparkles size={18} />
@@ -147,7 +147,7 @@ export default function Sidebar({
               type="button"
               onClick={() => onNavigate(id)}
               aria-current={view === id ? 'page' : undefined}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[0.95rem] font-medium transition lg:py-2 lg:text-sm ${
                 view === id ? 'bg-brand/15 text-brand' : 'text-mute hover:bg-panel2 hover:text-ink'
               }`}
             >
@@ -176,7 +176,7 @@ export default function Sidebar({
           </div>
         </div>
 
-        <div className="border-t border-line p-3">
+        <div className="border-t border-line p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={toggleTheme}

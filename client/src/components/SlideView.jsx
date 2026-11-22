@@ -1,6 +1,7 @@
 // Draws one slide from the design engine's instructions (utils/slideDesign.js).
 // It scales with its container (cqw units), so the same component makes big previews and small thumbnails.
-import { H, W } from '../utils/slideDesign.js';
+import { useState } from 'react';
+import { H, W, imageUrl } from '../utils/slideDesign.js';
 
 const cq = (pt) => `${((pt / 72 / W) * 100).toFixed(3)}cqw`; // font size in points -> % of slide width
 const inch = (v) => `${((v / W) * 100).toFixed(3)}cqw`;
@@ -14,7 +15,29 @@ function Marker({ style, index, color }) {
   return <span style={{ color, minWidth: inch(0.45), fontSize: style === 'dots' ? '0.7em' : '1em', lineHeight: style === 'dots' ? 1.9 : 1.15 }}>{content}</span>;
 }
 
-export default function SlideView({ spec, className = '' }) {
+// A picture. The colour behind it is shown while it loads, and stays if the picture cannot be made.
+function Picture({ it, box, show }) {
+  const [failed, setFailed] = useState(false);
+  const url = show ? imageUrl(it.prompt, it.seed) : '';
+  return (
+    <div style={{ ...box, background: `#${it.fill}`, overflow: 'hidden' }}>
+      {url && !failed && (
+        <img
+          src={url}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** `pictures={false}` skips loading images (used for the small thumbnails, so the page stays fast). */
+export default function SlideView({ spec, className = '', pictures = true }) {
   return (
     <div className={`overflow-hidden ${className}`} style={{ containerType: 'inline-size' }}>
       <div
@@ -26,8 +49,10 @@ export default function SlideView({ spec, className = '' }) {
       >
         {spec.items.map((it, i) => {
           const box = { position: 'absolute', left: left(it.x), top: top(it.y), width: left(it.w), height: top(it.h) };
-          if (it.t === 'rect') return <div key={i} style={{ ...box, background: `#${it.fill}`, borderRadius: it.radius ? inch(it.radius * 1.2) : 0 }} />;
-          if (it.t === 'ellipse') return <div key={i} style={{ ...box, background: `#${it.fill}`, borderRadius: '50%' }} />;
+          const opacity = it.alpha == null ? 1 : it.alpha;
+          if (it.t === 'image') return <Picture key={`${i}-${it.prompt}-${it.seed}`} it={it} box={box} show={pictures} />;
+          if (it.t === 'rect') return <div key={i} style={{ ...box, opacity, background: `#${it.fill}`, borderRadius: it.radius ? inch(it.radius * 1.2) : 0 }} />;
+          if (it.t === 'ellipse') return <div key={i} style={{ ...box, opacity, background: `#${it.fill}`, borderRadius: '50%' }} />;
           if (it.t === 'text') {
             return (
               <div key={i} style={{ ...box, display: 'flex', flexDirection: 'column', justifyContent: FLEX[it.valign] }}>

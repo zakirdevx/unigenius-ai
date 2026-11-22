@@ -14,7 +14,7 @@ function IconButton({ label, onClick, children }) {
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-mute transition hover:bg-panel2 hover:text-ink"
+      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-mute transition hover:bg-panel2 hover:text-ink sm:px-2 sm:py-1"
     >
       {children}
     </button>
@@ -51,7 +51,7 @@ function MessageBubble({ message, isLast, streaming, onRegenerate }) {
       <div className="fade-up flex justify-end">
         <div
           dir="auto"
-          className={`gradient-brand max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md px-4 py-2.5 text-[0.95rem] leading-relaxed text-white shadow-md sm:max-w-[75%] ${
+          className={`bubble-user max-w-[85%] whitespace-pre-wrap break-words rounded-3xl px-4 py-2.5 text-base leading-relaxed sm:max-w-[75%] sm:rounded-2xl sm:rounded-br-md sm:text-[0.95rem] ${
             isUrdu(message.content) ? 'urdu' : ''
           }`}
         >
@@ -73,7 +73,7 @@ function MessageBubble({ message, isLast, streaming, onRegenerate }) {
 
   return (
     <div className="fade-up flex gap-3">
-      <div className="gradient-brand mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white">
+      <div className="gradient-brand mt-0.5 hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-white sm:flex">
         <Sparkles size={16} />
       </div>
       <div className="min-w-0 flex-1">
@@ -90,15 +90,15 @@ function MessageBubble({ message, isLast, streaming, onRegenerate }) {
           <div className="mt-2 flex items-center gap-1">
             <IconButton label="Copy response" onClick={handleCopy}>
               {copied ? <Check size={14} className="text-good" /> : <Copy size={14} />}
-              {copied ? 'Copied' : 'Copy'}
+              <span className="max-sm:sr-only">{copied ? 'Copied' : 'Copy'}</span>
             </IconButton>
             <IconButton label={reading ? 'Stop reading' : 'Read aloud'} onClick={toggleListen}>
               {reading ? <Square size={13} fill="currentColor" /> : <Volume2 size={14} />}
-              {reading ? 'Stop' : 'Listen'}
+              <span className="max-sm:sr-only">{reading ? 'Stop' : 'Listen'}</span>
             </IconButton>
             {isLast && (
               <IconButton label="Regenerate response" onClick={onRegenerate}>
-                <RefreshCw size={14} /> Regenerate
+                <RefreshCw size={14} /> <span className="max-sm:sr-only">Regenerate</span>
               </IconButton>
             )}
           </div>

@@ -175,9 +175,10 @@ export const SLIDE_SCHEMA = {
     bullets: { type: Type.ARRAY, items: { type: Type.STRING } },
     speakerNotes: { type: Type.STRING },
     visualIdea: { type: Type.STRING },
+    imagePrompt: { type: Type.STRING },
   },
-  required: ['title', 'layout', 'bullets', 'speakerNotes', 'visualIdea'],
-  propertyOrdering: ['title', 'layout', 'bullets', 'speakerNotes', 'visualIdea'],
+  required: ['title', 'layout', 'bullets', 'speakerNotes', 'visualIdea', 'imagePrompt'],
+  propertyOrdering: ['title', 'layout', 'bullets', 'speakerNotes', 'visualIdea', 'imagePrompt'],
 };
 
 export const SLIDES_SCHEMA = {
@@ -188,6 +189,7 @@ export const SLIDES_SCHEMA = {
     themeSuggestion: { type: Type.STRING },
     designSuggestion: { type: Type.STRING },
     designTips: { type: Type.ARRAY, items: { type: Type.STRING } },
+    coverPrompt: { type: Type.STRING },
     slides: {
       type: Type.ARRAY,
       items: {
@@ -198,14 +200,15 @@ export const SLIDES_SCHEMA = {
           bullets: { type: Type.ARRAY, items: { type: Type.STRING } },
           speakerNotes: { type: Type.STRING },
           visualIdea: { type: Type.STRING },
+          imagePrompt: { type: Type.STRING },
         },
-        required: ['title', 'layout', 'bullets', 'speakerNotes', 'visualIdea'],
-        propertyOrdering: ['title', 'layout', 'bullets', 'speakerNotes', 'visualIdea'],
+        required: ['title', 'layout', 'bullets', 'speakerNotes', 'visualIdea', 'imagePrompt'],
+        propertyOrdering: ['title', 'layout', 'bullets', 'speakerNotes', 'visualIdea', 'imagePrompt'],
       },
     },
   },
-  required: ['title', 'subtitle', 'themeSuggestion', 'designSuggestion', 'designTips', 'slides'],
-  propertyOrdering: ['title', 'subtitle', 'themeSuggestion', 'designSuggestion', 'designTips', 'slides'],
+  required: ['title', 'subtitle', 'themeSuggestion', 'designSuggestion', 'designTips', 'coverPrompt', 'slides'],
+  propertyOrdering: ['title', 'subtitle', 'themeSuggestion', 'designSuggestion', 'designTips', 'coverPrompt', 'slides'],
 };
 
 export const QUIZ_SCHEMA = {

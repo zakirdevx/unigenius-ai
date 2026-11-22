@@ -11,6 +11,36 @@ export const hasSynthesis = () => Boolean(win && 'speechSynthesis' in win && 'Sp
 export const getVoiceLang = () => (loadString('voiceLang', 'en-US') === 'ur-PK' ? 'ur-PK' : 'en-US');
 export const setVoiceLang = (lang) => saveString('voiceLang', lang);
 
+// ---- phones: audio may only start after a tap. Call unlockAudio() inside the tap handler. ----
+const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+let sharedAudio = null;
+export const isMobileDevice = () => Boolean(win && /Android|iPhone|iPad|iPod/i.test(win.navigator.userAgent || ''));
+
+/** Unlocks sound playback for the whole session (needed on Android and iPhone). */
+export function unlockAudio() {
+  try {
+    sharedAudio ||= new Audio();
+    sharedAudio.src = SILENT;
+    sharedAudio.play().catch(() => {});
+    if (hasSynthesis()) {
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      win.speechSynthesis.speak(u);
+    }
+  } catch { /* ignore */ }
+}
+
+/** Asks for the microphone inside the tap (so the permission box appears), then lets go of it again. */
+export async function askMicPermission() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((t) => t.stop());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Listens once. Calls onEnd(finalText) when you stop talking (text may be empty). */
 export function createRecognizer({ lang, onInterim, onError, onEnd }) {
   const Recognition = win.SpeechRecognition || win.webkitSpeechRecognition;
@@ -177,12 +207,14 @@ export function createCloudSpeaker({ lang, onStart, onIdle, onCloudFail }) {
   let stopped = false;
   let audio = null;
   let failed = false;
+  let failures = 0;
   let fallback = null;
   const controllers = new Set();
 
   const fetchAudio = (text) => {
     const ctrl = new AbortController();
     controllers.add(ctrl);
+    const timer = setTimeout(() => ctrl.abort(), 12000); // a slow voice is worse than the basic one
     return fetch('/api/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -193,7 +225,10 @@ export function createCloudSpeaker({ lang, onStart, onIdle, onCloudFail }) {
         if (!res.ok) throw new Error('tts');
         return URL.createObjectURL(await res.blob());
       })
-      .finally(() => controllers.delete(ctrl));
+      .finally(() => {
+        clearTimeout(timer);
+        controllers.delete(ctrl);
+      });
   };
 
   const speakWithBrowser = (text) => {
@@ -228,8 +263,11 @@ export function createCloudSpeaker({ lang, onStart, onIdle, onCloudFail }) {
         url = await item.promise;
       } catch {
         if (stopped) return;
-        failed = true;
-        onCloudFail?.();
+        failures += 1;
+        if (failures >= 2 && !failed) {
+          failed = true;
+          onCloudFail?.();
+        }
       }
     }
     if (stopped) {
@@ -246,7 +284,8 @@ export function createCloudSpeaker({ lang, onStart, onIdle, onCloudFail }) {
       playing = false;
       pump();
     };
-    audio = new Audio(url);
+    audio = sharedAudio || new Audio();
+    audio.src = url;
     audio.onended = done;
     audio.onerror = done;
     audio.onplaying = () => onStart?.();
@@ -270,6 +309,7 @@ export function createCloudSpeaker({ lang, onStart, onIdle, onCloudFail }) {
       if (audio) {
         audio.onended = null;
         audio.onerror = null;
+        audio.onplaying = null;
         audio.pause();
         audio = null;
       }
